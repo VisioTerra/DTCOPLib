@@ -42,6 +42,15 @@ public abstract class ChunkedRasterNDAdapter implements ChunkedRasterND {
 		return numChunk;
 
 	}
+	
+	@Override public int[] coordToChunk(int[] coord) throws IllegalArgumentException {
+		int[] chunkShape = getChunkShape();
+		int[] chunk = new int[chunkShape.length];
+		for (int dim = 0; dim < chunk.length; dim += 1) {
+			chunk[dim] = coord[dim] / chunkShape[dim];
+		}
+		return chunk;
+	}
 
 	@Override public int coordToChunk(int coord, int dimension) throws IllegalArgumentException {
 		return coord / getChunkShape()[dimension];

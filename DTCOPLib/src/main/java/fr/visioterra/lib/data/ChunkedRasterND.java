@@ -10,6 +10,8 @@ public interface ChunkedRasterND extends RasterNDMetadata, AutoCloseable {
 	
 	public int[] getNumChunk();
 	
+	public int[] coordToChunk(int[] coord) throws IllegalArgumentException;
+	
 	public int coordToChunk(int coord, int dimension) throws IllegalArgumentException;
 	
 	public int chunkToCoord(int chunk, int dimension) throws IllegalArgumentException;
