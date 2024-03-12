@@ -25,6 +25,12 @@
 			<artifactId>cdm-core</artifactId>
 			<version>5.3.3</version>
 		</dependency>
+		
+		<dependency>
+			<groupId>org.apache.xmlgraphics</groupId>
+			<artifactId>xmlgraphics-commons</artifactId>
+			<version>1.5</version>
+		</dependency>
 	</dependencies>
 
 	<repositories>
