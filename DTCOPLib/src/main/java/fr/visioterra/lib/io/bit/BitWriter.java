@@ -1,4 +1,4 @@
-package fr.visioterra.lib.io;
+package fr.visioterra.lib.io.bit;
 
 import java.io.OutputStream;
 import java.util.Arrays;

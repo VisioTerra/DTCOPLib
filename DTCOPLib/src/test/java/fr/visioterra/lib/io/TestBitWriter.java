@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.util.Random;
 
+import fr.visioterra.lib.io.bit.BitWriter;
+
 public class TestBitWriter {
 	
 	public static void main(String[] args) throws Exception {
