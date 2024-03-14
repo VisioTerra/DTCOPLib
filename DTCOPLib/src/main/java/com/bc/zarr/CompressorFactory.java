@@ -107,21 +107,7 @@ public class CompressorFactory {
         if ("blosc".equals(id)) {
             return new BloscCompressor(properties);
         }
-//        if ("zstd".equals(id)) {
-//        	return new ZstdCompressor(properties);
-//        }
-//        if ("visioterra".equals(id)) {
-//        	return new VTCompressor(properties);
-//        }
-//        if ("quant".equals(id)) {
-//        	return new QuantCompressor(properties);
-//        }
-//        if ("octree".equals(id)) {
-//        	return new TreeCompressor(properties);
-//        }
-//        if ("zdct".equals(id)) {
-//        	return new ZDCTCompressor(properties);
-//        }
+        
         throw new IllegalArgumentException("Compressor id:'" + id + "' not supported.");
     }
 

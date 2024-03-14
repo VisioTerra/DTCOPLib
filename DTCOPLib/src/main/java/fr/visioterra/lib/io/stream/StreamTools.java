@@ -7,6 +7,23 @@ import java.io.OutputStream;
 
 public class StreamTools {
 	
+	
+	public static long copy(InputStream is, OutputStream os, int buffSize) throws IOException {
+		long length = 0;
+		
+		byte[] buff = new byte[buffSize];
+		int len = is.read(buff);
+		while(len >= 0) {
+			length += len;
+			os.write(buff, 0, len);
+			len = is.read(buff);
+		}
+		length += len;
+		
+		return length;
+	}
+	
+	
 	public static short readShort(InputStream is) throws IOException {
 		return (short)((is.read() << 8) | is.read()); 
 	}
