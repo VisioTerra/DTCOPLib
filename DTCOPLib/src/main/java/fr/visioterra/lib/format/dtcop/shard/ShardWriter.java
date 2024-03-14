@@ -76,12 +76,18 @@ public class ShardWriter {
 					//create a runnable and submit
 					Runnable runnable = new Runnable() {
 						@Override public void run() {
-							synchronized(lock) {
-								try {
-									chunkWriterMap.put(index,new ChunkWriter(origin, qChunks, maxError, cells, histogram));
-								} catch(Exception e) {
-									System.err.println(e.getMessage());
+							
+							try {
+								
+								//compte compression outside the synchronization block
+								ChunkWriter cw = new ChunkWriter(origin, qChunks, maxError, cells, histogram);
+								
+								synchronized(lock) {
+									chunkWriterMap.put(index,cw);
 								}
+								
+							} catch(Exception e) {
+								System.err.println(e.getMessage());
 							}
 						}
 					};

@@ -592,5 +592,33 @@ public class Chunk {
 	}
 	
 	
+	
+	private static void scaleRound(Array input, Array output, Index index, int dim, double scale, double offset) {
+		
+		int len = index.getShape(dim);
+		
+		if(dim == input.getRank() - 1) {
+			for(int i = 0 ; i < len ; i++) {
+				index.setDim(dim,i);
+				double value = input.getDouble(index) * scale + offset;
+				output.setInt(index,(int)Math.round(value));
+			}
+		}
+		else {
+			for(int i = 0 ; i < len ; i++) {
+				index.setDim(dim,i);
+				scaleRound(input,output,index,dim+1,scale,offset);
+			}
+		}
+		
+	}
+	
+	public static Chunk scaleRound(Chunk chunk, DataType outputDataType, double scale, double offset) {
+		Array output = Array.factory(outputDataType,chunk.getShape());
+		Index index = chunk.array.getIndex();
+		scaleRound(chunk.array, output, index, 0, scale, offset);
+		return new Chunk(output);
+	}
+	
 }
 

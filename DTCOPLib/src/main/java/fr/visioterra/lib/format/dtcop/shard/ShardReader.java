@@ -3,7 +3,6 @@ package fr.visioterra.lib.format.dtcop.shard;
 import java.io.File;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.util.Arrays;
 import java.util.HashMap;
 
 import fr.visioterra.lib.format.dtcop.chunk.Cell;
@@ -50,7 +49,7 @@ public class ShardReader implements AutoCloseable {
 	private final Object lock = new Object();
 	private final RandomAccessFile raf;
 	private final HashMap<Byte,BlockEntry> blockEntryMap = new HashMap<>();
-	private final DataType dataType;
+//	private final DataType dataType;
 	private final int[] shape;
 	private final int[] chunkShape;
 	private final int[] numChunk;
@@ -172,10 +171,112 @@ public class ShardReader implements AutoCloseable {
 		return new ByteArrayInputStream(array);
 	}
 	
-	public ShardReader(File file, DataType dataType) throws Exception {
+	private Chunk _getChunk(int[] chunkIdx, double scaleFactor, double addOffset, boolean round, DataType roundDataType) throws Exception {
+
+		//check arg
+		if(chunkIdx.length != this.numChunk.length) {
+			throw new IllegalArgumentException("Invalid dimension number (" + chunkIdx.length + " != " + this.numChunk.length + ")");
+		}
+		
+		for(int i = 0 ; i < this.numChunk.length ; i++) {
+			if(chunkIdx[i] < 0 || this.numChunk[i] <= chunkIdx[i]) {
+				throw new IllegalArgumentException("Invalid chunk coordinate in dimension " + i + " (" + chunkIdx[i] + " not in [0," + (this.numChunk[i]-1) + "])");
+			}
+		}
+
+		int cidx = 0;
+		for(int i = 0 ; i < this.numChunk.length ; i++) {
+			cidx = cidx * this.numChunk[i] + chunkIdx[i];
+		}
+		
+//		System.out.println("getChunk(" + Arrays.toString(chunkIdx) + ") => " + cidx + " / " + this.chunksOffset.length);
+		
+		
+		BlockEntry be = new BlockEntry(this.chunksOffset[cidx],this.chunksSize[cidx]);
+		
+		try(InputStream is = readBlock(this.raf, be)) {
+			
+			//TODO : check EOF
+
+			//read chunk shape
+			int[] shape = new int[is.read()];
+			int size = 1;
+			for(int d = 0 ; d < shape.length ; d++) {
+				shape[d] = is.read();
+				size = size * shape[d];
+			}
+
+			//read quantization polynom
+			float[] quantPolynom = new float[is.read()];
+			for(int d = 0 ; d < quantPolynom.length ; d++) {
+				quantPolynom[d] = Float.intBitsToFloat(StreamTools.readInt(is));
+			}
+
+			//create output array for coefficients in zig zag order
+			int[] zz = new int[size];
+
+			//read DC coefficient
+			zz[0] = StreamTools.readInt(is);
+
+			QuantChunk cq = new QuantChunk(shape, quantPolynom);
+
+			try(BitReader br = new BitReader(is)) {
+
+				//Start at idx = 1 because position 0 is already initialized with DC coef
+				int idx = 1; 
+				while(idx < size - 1) {
+
+					zz[idx] = huffman.readSymbol(br);
+
+					if(zz[idx] == ChunkWriter.rleCode) {
+						int s = (short)br.readBits(16);
+						for(int i = 0 ; i < s ; i++) {
+							zz[idx] = 0;
+							idx++;
+						}
+					}
+					else {
+						idx++;
+					}
+
+				}
+			}
+
+			Chunk chunk = new Chunk(DataType.FLOAT, shape, zz, this.zigzagOrder);
+			chunk.scale(cq,true,false);
+			chunk.idct();
+			
+			boolean applyScaleOffset = Double.isNaN(scaleFactor) == false && Double.isNaN(addOffset) == false;
+			
+			if(round) {
+				if(applyScaleOffset) {
+					chunk = Chunk.scaleRound(chunk, roundDataType, scaleFactor, addOffset);
+				}
+				else {
+					chunk = Chunk.scaleRound(chunk, roundDataType, 1.0, 0.0);
+				}
+			}
+			else {
+				if(applyScaleOffset) {
+					chunk.scale(scaleFactor, addOffset);
+				}
+			}
+			
+			return chunk;
+			
+//			int idx = 0; //this.chunksSize.length - 1;
+//			byte[] tmp = new byte[this.chunksSize[idx]];
+//			raf.seek(this.chunksOffset[idx]);
+//			raf.readFully(tmp,0,tmp.length);
+//			Chunk chunk = ChunkReader.getChunk(new ByteArrayInputStream(tmp), huffman, this.zigzagOrder);
+//			chunk.print(false);
+		}
+	}
+	
+	public ShardReader(File file) throws Exception {
 
 		this.raf = new RandomAccessFile(file,"r");
-		this.dataType = dataType;
+//		this.dataType = dataType;
 
 		byte[] bytes = new byte[6];
 		this.raf.readFully(bytes);
@@ -332,9 +433,9 @@ public class ShardReader implements AutoCloseable {
 		
 	}
 	
-	public DataType getDataType() {
-		return this.dataType;
-	}
+//	public DataType getDataType() {
+//		return this.dataType;
+//	}
 	
 	public int[] getShape() {
 		return this.shape;
@@ -353,83 +454,15 @@ public class ShardReader implements AutoCloseable {
 	}
 	
 	public Chunk getChunk(int[] chunkIdx) throws Exception {
-		
-//		int cidx = 0;
-//		for(int i = 0 ; i < this.chunkShape.length ; i++) {
-//			cidx = cidx * this.chunkShape[i] + chunkIdx[i];
-//		}
-
-		int cidx = 0;
-		for(int i = 0 ; i < this.numChunk.length ; i++) {
-			cidx = cidx * this.numChunk[i] + chunkIdx[i];
-		}
-		
-//		System.out.println("getChunk(" + Arrays.toString(chunkIdx) + ") => " + cidx + " / " + this.chunksOffset.length);
-		
-		
-		BlockEntry be = new BlockEntry(this.chunksOffset[cidx],this.chunksSize[cidx]);
-		
-		try(InputStream is = readBlock(this.raf, be)) {
-			
-			//TODO : check EOF
-
-			//read chunk shape
-			int[] shape = new int[is.read()];
-			int size = 1;
-			for(int d = 0 ; d < shape.length ; d++) {
-				shape[d] = is.read();
-				size = size * shape[d];
-			}
-
-			//read quantization polynom
-			float[] quantPolynom = new float[is.read()];
-			for(int d = 0 ; d < quantPolynom.length ; d++) {
-				quantPolynom[d] = Float.intBitsToFloat(StreamTools.readInt(is));
-			}
-
-			//create output array for coefficients in zig zag order
-			int[] zz = new int[size];
-
-			//read DC coefficient
-			zz[0] = StreamTools.readInt(is);
-
-			QuantChunk cq = new QuantChunk(shape, quantPolynom);
-
-			try(BitReader br = new BitReader(is)) {
-
-				//Start at idx = 1 because position 0 is already initialized with DC coef
-				int idx = 1; 
-				while(idx < size - 1) {
-
-					zz[idx] = huffman.readSymbol(br);
-
-					if(zz[idx] == ChunkWriter.rleCode) {
-						int s = (short)br.readBits(16);
-						for(int i = 0 ; i < s ; i++) {
-							zz[idx] = 0;
-							idx++;
-						}
-					}
-					else {
-						idx++;
-					}
-
-				}
-			}
-
-			Chunk chunk = new Chunk(DataType.FLOAT, shape, zz, this.zigzagOrder);
-			chunk.scale(cq,true,false);
-			chunk.idct();
-			return chunk;
-			
-			
-//			int idx = 0; //this.chunksSize.length - 1;
-//			byte[] tmp = new byte[this.chunksSize[idx]];
-//			raf.seek(this.chunksOffset[idx]);
-//			raf.readFully(tmp,0,tmp.length);
-//			Chunk chunk = ChunkReader.getChunk(new ByteArrayInputStream(tmp), huffman, this.zigzagOrder);
-//			chunk.print(false);
-		}
+		return _getChunk(chunkIdx, Double.NaN, Double.NaN, false, null);
+	}
+	
+	public Chunk getChunk(int[] chunkIdx, double scaleFactor, double addOffset) throws Exception {
+		return _getChunk(chunkIdx, scaleFactor, addOffset, false, null);
+	}
+	
+	public Chunk getChunk(int[] chunkIdx, double scaleFactor, double addOffset, boolean round, DataType roundDataType) throws Exception {
+		return _getChunk(chunkIdx, scaleFactor, addOffset, round, roundDataType);
 	}
 	
 	@Override public void close() throws Exception {
