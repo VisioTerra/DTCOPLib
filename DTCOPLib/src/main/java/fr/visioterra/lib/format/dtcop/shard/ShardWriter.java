@@ -2,6 +2,7 @@ package fr.visioterra.lib.format.dtcop.shard;
 
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -21,11 +22,16 @@ import ucar.ma2.DataType;
 
 public class ShardWriter {
 
-	public static final byte[] magicNumber = new byte[] { 68, 84, 67, 79, 80}; 
-	public static final byte idVersion  = 0x00;
-	public static final byte idHeader   = 0x01;
-	public static final byte idHuffTab  = 0x02;
-	public static final byte idChunkTab = 0x03;
+	public static boolean debug = false;
+	public static final byte[] magicNumber        = new byte[] { 68, 84, 67, 79, 80}; 
+	public static final byte idVersion            = 0x00;
+	public static final byte idBlockHeader        = 0x21;
+	public static final byte idBlockHuffmanTable  = 0x22;
+	public static final byte idBlockChunksTable   = 0x24;
+	public static final byte idBlockChunks        = 0x28;
+	public static final int huffmanTableSymbolLen = 16;
+	
+	
 	
 	private static Huffman computeHuffmanTable(Shard shard, List<QuantChunk> qChunks, double maxError, int threadNumber, TreeMap<Integer,ChunkWriter> chunkWriterMap) throws Exception {
 		
@@ -43,6 +49,8 @@ public class ShardWriter {
 		int[] idxChunk = new int[] {0,0,0};
 		int idx = 0;
 		
+		final Object lock = new Object();
+		
 		//loop on k dim
 		for(int k = 0 ; k < numChunk[0] ; k++) {
 			idxChunk[0] = k;
@@ -56,6 +64,10 @@ public class ShardWriter {
 					idxChunk[2] = i;
 
 					final int index = idx;
+					
+					//TODO : remove debug
+//					System.out.println(Arrays.toString(idxChunk) + " => " + idx);
+					
 					idx++;
 					
 					//get chunk as FLOAT Array
@@ -65,7 +77,7 @@ public class ShardWriter {
 					Runnable runnable = new Runnable() {
 						@Override public void run() {
 							ChunkWriter cw = new ChunkWriter(origin, qChunks, maxError, cells, histogram);
-							synchronized(chunkWriterMap) {
+							synchronized(lock) {
 								chunkWriterMap.put(index,cw);
 							}
 						}
@@ -89,12 +101,21 @@ public class ShardWriter {
 		os.write(idVersion);
 	}
 	
+	private static void writeHeaderTag(OutputStream os, byte idBlock, int blockSize) throws Exception {
+		os.write(idBlock);
+		StreamTools.writeInt(os,blockSize);
+	}
+	
 	private static void writeHeader(OutputStream os, int[] shape, int[] chunkShape) throws Exception {
 		
-		int headerSize = 1 + 4 * shape.length;
+		if(debug) {
+			System.out.println("writeHeader");
+		}
 		
-		os.write(idHeader);
-		StreamTools.writeShort(os, headerSize);
+		int dim = shape.length;
+		
+		int blockSize = 1 + 2 * dim + 2 *dim;
+		writeHeaderTag(os, idBlockHeader, blockSize);
 		
 		//1 - write array dimension number
 		os.write((byte)shape.length);
@@ -108,9 +129,18 @@ public class ShardWriter {
 		for(int d : chunkShape) {
 			StreamTools.writeShort(os, d);
 		}
+		
+		if(debug) {
+			System.out.println("Shape = " + Arrays.toString(shape) + " / ChunkShape = " + Arrays.toString(chunkShape));
+		}
+		
 	}
 	
-	private static void writeHuffmanTable(OutputStream os, Huffman huffman) throws Exception {
+	private static void writeHuffmanTable(OutputStream os, Huffman huffman, int symbolLen) throws Exception {
+		
+		if(debug) {
+			System.out.println("writeHuffmanTable");
+		}
 		
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		try(BitWriter bw = new BitWriter(baos,64)) {
@@ -118,22 +148,45 @@ public class ShardWriter {
 		}
 		byte[] huffmanTableData = baos.toByteArray();
 
+		int blockSize = 1 + 4 + huffmanTableData.length;
+		writeHeaderTag(os, idBlockHuffmanTable,  blockSize);
 		
-		os.write(idHuffTab);
+		os.write(symbolLen);
 		StreamTools.writeInt(os, huffman.getSymbolCount());
-		StreamTools.writeInt(os, huffmanTableData.length);
 		os.write(huffmanTableData);
+		
+		if(debug) {
+			System.out.println("Block size = " + blockSize);
+		}
+	}
+	
+	private static void writeChunksTable(OutputStream os, ArrayList<byte[]> chunkDataList) throws Exception {
+		
+		if(debug) {
+			System.out.println("writeChunksTable / count = " + chunkDataList.size());
+		}
+		
+		int blockSize = 2 + 4 * chunkDataList.size();
+		writeHeaderTag(os, idBlockChunksTable, blockSize);
+		
+		StreamTools.writeShort(os,chunkDataList.size());
+		for(byte[] data : chunkDataList) {
+			StreamTools.writeInt(os,data.length);
+			if(debug) {
+				System.out.println("Chunk size = " + data.length);
+			}
+		}
 		
 	}
 	
 	private static void writeChunks(OutputStream os, ArrayList<byte[]> chunkDataList) throws Exception {
 		
-		os.write(idChunkTab);
-		
-		StreamTools.writeShort(os,chunkDataList.size());
+		int blockSize = 0;
 		for(byte[] data : chunkDataList) {
-			StreamTools.writeInt(os,data.length);
+			blockSize += data.length;
 		}
+		
+		writeHeaderTag(os, idBlockChunks, blockSize);
 		
 		for(byte[] data : chunkDataList) {
 			os.write(data);
@@ -153,6 +206,9 @@ public class ShardWriter {
 		//create Huffman table
 		Huffman huffman = computeHuffmanTable(shard, qChunks, maxError, threadNumber, chunkWriterMap);
 
+		if(debug) {
+			System.out.println("ShardWriter.write(...) : " + chunkWriterMap.size() + " chunks");
+		}
 		
 		ArrayList<byte[]> chunkDataList = new ArrayList<>();
 		for(ChunkWriter cw : chunkWriterMap.values()) {
@@ -162,7 +218,8 @@ public class ShardWriter {
 		
 		writeMagic(os);
 		writeHeader(os, shard.getShape(), shard.getChunkShape());
-		writeHuffmanTable(os, huffman);
+		writeHuffmanTable(os, huffman, huffmanTableSymbolLen);
+		writeChunksTable(os, chunkDataList);
 		writeChunks(os, chunkDataList);
 		
 	}

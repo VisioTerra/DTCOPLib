@@ -10,9 +10,9 @@ import fr.visioterra.lib.io.stream.ByteArrayOutputStream;
 
 public class ChunkWriter {
 
+	public static final int rleCode   = -32768;
 	private static final int minValue = -32767;
 	private static final int maxValue = +32767;
-	private static final int rleCode  = -32768;
 	private static final int maxZeroSequenceLen = 22;
 	
 	private final int[] shape;

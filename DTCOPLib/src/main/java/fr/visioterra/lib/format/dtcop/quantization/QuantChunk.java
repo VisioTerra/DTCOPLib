@@ -10,7 +10,7 @@ public class QuantChunk extends Chunk {
 	private static Array quant(int[] shape, float[] polynom) {
 		
 		if(shape.length != 3) {
-			throw new IllegalArgumentException();
+			throw new IllegalArgumentException("shape.length = " + shape.length);
 		}
 		
 		Array output = new ArrayFloat(shape);
