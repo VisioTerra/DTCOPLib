@@ -10,6 +10,7 @@ import com.bc.zarr.ZarrArray;
 import com.bc.zarr.ZarrGroup;
 import com.bc.zarr.storage.Store;
 
+import fr.visioterra.lib.data.ChunkedRasterNDDTCOP;
 import fr.visioterra.lib.data.ChunkedRasterNDZarr;
 
 public class ZarrReader {
@@ -41,6 +42,10 @@ public class ZarrReader {
 	
 	public ChunkedRasterNDZarr getRaster(String varName, ZarrFilter filter) throws IOException {
 		return new ChunkedRasterNDZarr(this.zarrGroup, varName, filter);
+	}
+	
+	public ChunkedRasterNDDTCOP getRaster(String varName, ZarrFilter filter, int[] forceChunkShape) throws IOException {
+		return new ChunkedRasterNDDTCOP(this.zarrGroup, varName, filter, forceChunkShape);
 	}
 	
 	public static List<String> getArrayDimensions(ZarrArray zarrArray) throws IOException {

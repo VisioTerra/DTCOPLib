@@ -352,8 +352,10 @@ public class Chunk {
 		
 	}
 	
-	
-	
+	public Array getArray() {
+		return this.array;
+	}
+
 	public int[] getShape() {
 		return this.shape;
 	}

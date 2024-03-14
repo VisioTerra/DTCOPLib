@@ -33,6 +33,8 @@ import com.bc.zarr.compressor.BloscCompressor;
 import com.bc.zarr.compressor.NullCompressor;
 import com.bc.zarr.compressor.ZlibCompressor;
 
+import fr.visioterra.lib.format.dtcop.zarr.DTCOPCompressor;
+
 
 public class CompressorFactory {
 
@@ -107,7 +109,9 @@ public class CompressorFactory {
         if ("blosc".equals(id)) {
             return new BloscCompressor(properties);
         }
-        
+        if ("dtcop".equals(id)) {
+        	return new DTCOPCompressor(properties, 1.0, 10);
+        }
         throw new IllegalArgumentException("Compressor id:'" + id + "' not supported.");
     }
 

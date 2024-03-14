@@ -64,6 +64,15 @@ public class FileSystemStore implements Store {
     public FileSystemStore(Path rootPath) {
         internalRoot = rootPath;
     }
+    
+    
+    public Path getInternalRoot() {
+    	return internalRoot;
+    }
+    
+    public File getFile(String key) {
+    	return internalRoot.resolve(key).toFile();
+    }
 
     private InputStream getInputStream0(String key) throws IOException {
         final Path path = internalRoot.resolve(key);

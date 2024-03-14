@@ -36,6 +36,7 @@ import ucar.ma2.Array;
 import ucar.ma2.InvalidRangeException;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -410,6 +411,27 @@ public class ZarrArray {
             ZarrUtils.toJson(zarrHeader, writer, true);
         }
     }
+
+
+    public String getShardPath(int[] shardIndex) {
+    	
+    	if(_store instanceof FileSystemStore == false) {
+    		throw new UnsupportedOperationException("ZarrArray.getShard() only works with FileSystemStore");
+    	}
+    	
+//    	Path path = ((FileSystemStore)_store).getInternalRoot();
+    	
+//        final String chunkFilename = getChunkFilename(shardIndex);
+//        final ZarrPath chunkFilePath = relativePath.resolve(chunkFilename);
+    		
+//        System.out.println(chunkFilename + " / " + chunkFilePath.storeKey + " / " + path);
+        
+        String chunkFilename = getChunkFilename(shardIndex);
+        ZarrPath chunkFilePath = relativePath.resolve(chunkFilename);
+        return ((FileSystemStore)_store).getFile(chunkFilePath.storeKey).getAbsolutePath();
+        
+    }
+
 }
 
 
