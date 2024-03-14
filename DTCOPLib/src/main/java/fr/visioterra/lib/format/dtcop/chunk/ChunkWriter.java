@@ -44,6 +44,12 @@ public class ChunkWriter {
 		
 		//find the right quantization matrix
 		QuantChunk qc = checkError(origin, dct, qChunks, maxError);
+
+		//if use, try to use the last QuantChunk
+		if(qc == null) {
+			qc = qChunks.get(qChunks.size() - 1);
+		}
+		
 		this.quantPolynom = qc.getPolynom();
 		
 //		System.out.println(Arrays.toString(idxChunk) + " => " + qc.getIdx() + " / " + Arrays.toString(qc.getPolynom()) + " / " + qc.getError() + " / " + maxError);
