@@ -76,9 +76,12 @@ public class ShardWriter {
 					//create a runnable and submit
 					Runnable runnable = new Runnable() {
 						@Override public void run() {
-							ChunkWriter cw = new ChunkWriter(origin, qChunks, maxError, cells, histogram);
 							synchronized(lock) {
-								chunkWriterMap.put(index,cw);
+								try {
+									chunkWriterMap.put(index,new ChunkWriter(origin, qChunks, maxError, cells, histogram));
+								} catch(Exception e) {
+									System.err.println(e.getMessage());
+								}
 							}
 						}
 					};
@@ -205,6 +208,16 @@ public class ShardWriter {
 		
 		//create Huffman table
 		Huffman huffman = computeHuffmanTable(shard, qChunks, maxError, threadNumber, chunkWriterMap);
+
+		int count = 1;
+		int[] numChunk = shard.getNumChunk();
+		for(int i = 0 ; i < numChunk.length ; i++) {
+			count = count * numChunk[i];
+		}
+		
+		if(count != chunkWriterMap.size()) {
+			throw new Exception("Invalid processed chunk number (expected=" + count + " / written=" + chunkWriterMap.size() + ")");
+		}
 
 		if(debug) {
 			System.out.println("ShardWriter.write(...) : " + chunkWriterMap.size() + " chunks");

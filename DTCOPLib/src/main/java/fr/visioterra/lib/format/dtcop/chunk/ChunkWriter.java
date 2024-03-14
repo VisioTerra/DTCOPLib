@@ -34,7 +34,7 @@ public class ChunkWriter {
 		return null;
 	}
 	
-	public ChunkWriter(Chunk origin, List<QuantChunk> qChunks, double maxError, Cell[] order, Histogram histogram) {
+	public ChunkWriter(Chunk origin, List<QuantChunk> qChunks, double maxError, Cell[] order, Histogram histogram) throws Exception {
 	
 		this.shape = origin.getShape();
 		
@@ -62,7 +62,7 @@ public class ChunkWriter {
 			int sample = this.coefficients[idx];
 			
 			if(sample < minValue || maxValue < sample) {
-				throw new IllegalArgumentException("value " + sample + " out of range [" + minValue + "," + maxValue + "]");
+				throw new Exception("value " + sample + " out of range [" + minValue + "," + maxValue + "]");
 			}
 			
 			//case sample == 0 => increment count
