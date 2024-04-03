@@ -3,8 +3,10 @@ package fr.visioterra.lib.format.dtcop.shard;
 import java.io.File;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.util.Arrays;
 import java.util.HashMap;
 
+import fr.visioterra.lib.cache.KVCacheMap;
 import fr.visioterra.lib.format.dtcop.chunk.Cell;
 import fr.visioterra.lib.format.dtcop.chunk.Chunk;
 import fr.visioterra.lib.format.dtcop.chunk.ChunkWriter;
@@ -18,6 +20,10 @@ import ucar.ma2.DataType;
 
 
 public class ShardReader implements AutoCloseable {
+	
+	private static final KVCacheMap<PolynomKey, QuantChunk> quantChunkCache = new KVCacheMap<>(false,1000);
+	private static final Object cacheLock = new Object(); 
+	
 	
 	private static class BlockEntry {
 
@@ -39,6 +45,27 @@ public class ShardReader implements AutoCloseable {
 		
 		@Override public String toString() {
 			return "[offset=" + offset + " size=" + size + "]";
+		}
+		
+	}
+	
+	private static class PolynomKey {
+		
+		private final float[] polynom;
+		
+		public PolynomKey(float[] polynom) {
+			this.polynom = polynom;
+		}
+		
+		@Override public boolean equals(Object o) {
+			if(o instanceof PolynomKey == false) {
+				return false;
+			}
+			return Arrays.equals(this.polynom,((PolynomKey)o).polynom); 
+		}
+		
+		@Override public int hashCode() {
+			return Arrays.hashCode(this.polynom); 
 		}
 		
 	}
@@ -218,7 +245,21 @@ public class ShardReader implements AutoCloseable {
 			//read DC coefficient
 			zz[0] = StreamTools.readInt(is);
 
-			QuantChunk cq = new QuantChunk(shape, quantPolynom);
+//			QuantChunk cq = new QuantChunk(shape, quantPolynom);
+			
+			PolynomKey pk = new PolynomKey(quantPolynom);
+			QuantChunk qc = quantChunkCache.get(pk);
+			if(qc == null) {
+				synchronized (cacheLock) {
+					qc = quantChunkCache.get(pk);
+					if(qc == null) {
+						qc = new QuantChunk(shape, quantPolynom);
+						quantChunkCache.put(pk,qc);
+						
+						System.out.println("create QuantChunk with polynom " + Arrays.toString(quantPolynom));
+					}
+				}
+			}
 
 			try(BitReader br = new BitReader(is)) {
 
@@ -230,6 +271,7 @@ public class ShardReader implements AutoCloseable {
 
 					if(zz[idx] == ChunkWriter.rleCode) {
 						int s = (short)br.readBits(16);
+//						int s = (int)br.readBits(16);
 						for(int i = 0 ; i < s ; i++) {
 							zz[idx] = 0;
 							idx++;
@@ -243,7 +285,7 @@ public class ShardReader implements AutoCloseable {
 			}
 
 			Chunk chunk = new Chunk(DataType.FLOAT, shape, zz, this.zigzagOrder);
-			chunk.scale(cq,true,false);
+			chunk.scale(qc,true,false);
 			chunk.idct();
 			
 			boolean applyScaleOffset = Double.isNaN(scaleFactor) == false && Double.isNaN(addOffset) == false;

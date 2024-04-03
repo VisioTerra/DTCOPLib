@@ -1,5 +1,7 @@
 package fr.visioterra.lib.data.cache;
 
+import java.util.Arrays;
+
 import fr.visioterra.lib.cache.KVCacheMap;
 import fr.visioterra.lib.cache.KVStore;
 import fr.visioterra.lib.data.ChunkedRasterND;
@@ -83,7 +85,7 @@ public class ChunkedRasterNDBufferedCache extends RasterNDBufferedAdapter {
 //					this.bench2.start();
 					
 					Array chunk = this.chunkedRaster.getChunk(chunkCoords);
-//					System.out.println("getBufferedChunk(" + Arrays.toString(chunkCoords) + ")");
+//					System.out.println("ChunkedRasterNDBufferedCache.getBufferedChunk(" + Arrays.toString(chunkCoords) + ")");
 					
 //					this.bench2.stop();
 

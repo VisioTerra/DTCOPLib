@@ -21,6 +21,7 @@ import ucar.nc2.Attribute;
 import ucar.nc2.AttributeContainer;
 import ucar.nc2.Dimension;
 import ucar.nc2.Variable;
+import ucar.nc2.VariableSimpleIF;
 
 public class ZarrWriter {
 
@@ -31,7 +32,7 @@ public class ZarrWriter {
 	public long[] browse = new long[6]; //{ nb call, total time, nb read, read time, nb write, write time } 
 	
 	
-	private void createZattrs(Variable variable) throws Exception {
+	private void createZattrs(VariableSimpleIF variable) throws Exception {
 		createZattrs(variable.getDimensions(), variable.attributes(), variable.getFullName());
 	}
 	
@@ -198,13 +199,13 @@ public class ZarrWriter {
 		this.root = ZarrGroup.create(path);
 	}
 	
-	public void encodeVariable(Variable variable, RasterND raster, int[] chunkSize) throws Exception {
+	public void encodeVariable(VariableSimpleIF variable, RasterND raster, int[] chunkSize) throws Exception {
 		Compressor compressor = CompressorFactory.create("zlib", "level", 9);
 //		Compressor compressor = CompressorFactory.nullCompressor;
 		encodeVariable(variable, raster, chunkSize, null, compressor);
 	}
 
-	public void encodeVariable(Variable variable, RasterND raster, int[] chunkSize, ZarrFilter filter, Compressor compressor) throws Exception {
+	public void encodeVariable(VariableSimpleIF variable, RasterND raster, int[] chunkSize, ZarrFilter filter, Compressor compressor) throws Exception {
 		
 		int[] fullShape = raster.getShape();
 		

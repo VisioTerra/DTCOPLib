@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Map;
 
 import com.bc.zarr.Compressor;
@@ -83,6 +84,9 @@ public class DTCOPCompressor extends Compressor {
 	}
 	
 	@Override public void compress(Array array, OutputStream os) throws IOException {
+		
+		//TODO : remove debug
+		System.out.println("compress array " + Arrays.toString(array.getShape()));
 
 		Shard shard = new Shard(array,this.chunkShape);
 

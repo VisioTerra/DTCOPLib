@@ -99,6 +99,7 @@ public abstract class RasterNDBufferedAdapter extends ChunkedRasterNDAdapter imp
 		
 		public Array getChunk(int[] coordinates) {
 			if (Arrays.equals(this.coordinates, coordinates)) {
+//				System.out.println(Arrays.toString(this.coordinates) + " / " + Arrays.toString(coordinates));
 				return chunk;
 			}
 			
@@ -106,7 +107,8 @@ public abstract class RasterNDBufferedAdapter extends ChunkedRasterNDAdapter imp
 		}
 		
 		public void setChunk(int[] coordinates, Array chunk) {
-			this.coordinates = Arrays.copyOf(coordinates, coordinates.length);
+//			this.coordinates = Arrays.copyOf(coordinates, coordinates.length);
+			System.arraycopy(coordinates,0,this.coordinates,0, coordinates.length);
 			this.chunk = chunk;
 		}
 		
@@ -131,17 +133,28 @@ public abstract class RasterNDBufferedAdapter extends ChunkedRasterNDAdapter imp
 	
 	private Array getLocalChunk(int[] chunkCoords) throws Exception {
 		
+		return getBufferedChunk(chunkCoords);
+		
+		/*
+//		System.out.println("getLocalChunk(" + Arrays.toString(chunkCoords) + ")");
 		Array chunk = null;
 		BufferedChunck bc = threadLocal.get();
 		
 		if (bc == null) {
+			
+//			System.out.println("getBufferedChunk(" + Arrays.toString(chunkCoords) + ")");
+			
 			chunk = getBufferedChunk(chunkCoords);
 			bc = new BufferedChunck(chunkCoords, chunk);
 			threadLocal.set(bc);
 		}
 		
 		else {
+			
 			chunk = bc.getChunk(chunkCoords);
+			
+//			System.out.println("getChunk(" + Arrays.toString(chunkCoords) + ") : ");
+			
 			if (chunk == null) {
 				chunk = getBufferedChunk(chunkCoords);
 				bc.setChunk(chunkCoords, chunk);
@@ -149,6 +162,7 @@ public abstract class RasterNDBufferedAdapter extends ChunkedRasterNDAdapter imp
 		}
 		
 		return chunk;
+		*/
 	}
 	
 

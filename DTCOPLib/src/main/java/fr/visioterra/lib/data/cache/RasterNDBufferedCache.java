@@ -1,5 +1,7 @@
 package fr.visioterra.lib.data.cache;
 
+import java.util.Arrays;
+
 import fr.visioterra.lib.cache.KVCacheMap;
 import fr.visioterra.lib.cache.KVStore;
 import fr.visioterra.lib.data.RasterND;
@@ -55,7 +57,7 @@ public class RasterNDBufferedCache extends RasterNDBufferedAdapter {
 	}
 
 	@Override protected Array getBufferedChunk(int[] chunkCoords) throws Exception {
-
+//		System.out.println("getBufferedChunk(" + Arrays.toString(chunkCoords) + ")");
 		ChunkKey ck = new ChunkKey(this.id, chunkCoords);
 
 		SerializeArray sChunk = (SerializeArray) this.cache.get(ck);
